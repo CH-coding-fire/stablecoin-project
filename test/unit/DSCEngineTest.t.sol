@@ -15,6 +15,7 @@ contract DSCEngineTest is Test {
     DSCEngine public engine;
     HelperConfig public config;
     address ethUsdPriceFeed;
+    address btcUsdPriceFeed;
     address weth;
     uint256 deployerKey;
 
@@ -25,10 +26,32 @@ contract DSCEngineTest is Test {
     function setUp() public returns (DecentralizedStableCoin, DSCEngine) {
         deployer = new DeployDSC();
         (dsc, engine, config) = deployer.run();
-        (ethUsdPriceFeed, , weth, , deployerKey) = config.activeNetworkConfig();
+        (ethUsdPriceFeed, btcUsdPriceFeed, weth, , deployerKey) = config
+            .activeNetworkConfig();
 
-        ERC20Mock(weth).mint(USER,)
+        ERC20Mock(weth).mint(USER, STARTING_ERC20_BALANCE);
     }
+
+    //constructor test
+
+    address[] public tokenAddresses;
+    address[] public priceFeedAddresses;
+
+    function testRevertTokenAddressesAndPriceFeedAddressesMustBeSameLength()
+        public
+    {
+        tokenAddresses.push(weth);
+        priceFeedAddresses.push(ethUsdPriceFeed);
+        priceFeedAddresses.push(btcUsdPriceFeed);
+        vm.expectRevert(
+            DSCEngine
+                .DSCEngine__TokenAddressesAndPriceFeedAddressesMustBeSameLength
+                .selector
+        );
+        new DSCEngine(tokenAddresses, priceFeedAddresses, address(dsc));
+    }
+
+    //price tests
 
     function testGetUsdValue() public {
         console.log(deployerKey);
@@ -48,4 +71,6 @@ contract DSCEngineTest is Test {
         engine.depositCollateral(weth, 0);
         vm.stopPrank();
     }
+
+    function testGetTokenAmountFromUsd() public {}
 }
