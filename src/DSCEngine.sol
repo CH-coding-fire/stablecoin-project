@@ -31,6 +31,8 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__NotAllowedToken();
     error DSCEngine__DSCEngineTransferFailed();
     error DSCEngine__BreaksHealthFactor(uint256 healthFactor);
+    error DSCEngine__BreaksHealthFactor2();
+
     error DSCEngine__MintFailed();
     error DSCEngine__CollateralExceedsBalance();
     error DSCEngine__TransferFail();
@@ -43,6 +45,7 @@ contract DSCEngine is ReentrancyGuard {
     uint256 private constant LIQUIDATION_PRECISION = 100;
     uint256 private constant MIN_HEALTH_FACTOR = 1e18;
     uint256 private constant LIQUIDATION_BONUS = 10; //this means a 10% bonus
+    uint256 private constant INFINITY = 10e18;
 
     mapping(address token => address priceFeed) private s_priceFeed;
     mapping(address user => mapping(address token => uint256 amount))
@@ -159,7 +162,7 @@ contract DSCEngine is ReentrancyGuard {
     ) public payable nonReentrant moreThanZero(amountCollateral) {
         //todo: it should have payable here, correct?
         if (
-            amountCollateral >=
+            amountCollateral >
             s_collateralDeposited[msg.sender][tokenCollateralAddress]
         ) {
             revert DSCEngine__CollateralExceedsBalance();
@@ -220,6 +223,10 @@ contract DSCEngine is ReentrancyGuard {
      * @notice a known bug would be if the protocol were 100% or less collateralized, then we wouldn't be able to incentiviise the liquidators
      * For example, fi the price of the collateral plummeted before anyone could be liquidated
      */
+
+    function healthFactor(address user) public returns (uint256) {
+        return _healthFactor(user);
+    }
 
     function liquidate(
         address collateral,
@@ -291,22 +298,28 @@ contract DSCEngine is ReentrancyGuard {
 
     //THIS HAS BUG!!! INSPECT LATER
     function _healthFactor(address user) private view returns (uint256) {
-        //total DSC minted
-        //total collateral VALUE
         (
             uint256 totalDscMinted,
             uint256 collateralValueInUsd
         ) = _getAccountInformation(user);
+        // LIQUIDATION_THRESHOLD is 50
+        // LIQUIDATION_PRECISION is 100
         uint256 collateralAdjustedForThreshold = (collateralValueInUsd *
             LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
-        return (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
+        if (totalDscMinted != 0) {
+            return
+                (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
+        } else {
+            return 10e18;
+        }
     }
 
     //private and internal functions
     function _revertIfHealthFActorIsBroken(address user) internal view {
         uint256 userHealthFactor = _healthFactor(user);
         if (userHealthFactor < MIN_HEALTH_FACTOR) {
-            revert DSCEngine__BreaksHealthFactor(userHealthFactor);
+            // revert DSCEngine__BreaksHealthFactor(userHealthFactor);
+            revert DSCEngine__BreaksHealthFactor2();
         }
     }
 
@@ -389,11 +402,29 @@ contract DSCEngine is ReentrancyGuard {
             to,
             amountCollateral
         );
-        if (success) {
+        if (!success) {
             revert DSCEngine__TransferFail();
         }
         //some of the collateral goes to the "from address"
         // the bonus go to "to"
         // the question is
+    }
+
+    function getAccountInformation(
+        address user
+    )
+        external
+        view
+        returns (uint256 totalDscMinted, uint256 collateralValueInUsd)
+    {
+        (totalDscMinted, collateralValueInUsd) = _getAccountInformation(user);
+    }
+
+    function getMinHealthFactor() external pure returns (uint256) {
+        return MIN_HEALTH_FACTOR;
+    }
+
+    function getDSCAddress() external view returns (address) {
+        return address(i_dsc);
     }
 }
