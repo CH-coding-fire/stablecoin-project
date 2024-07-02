@@ -66,6 +66,22 @@ contract DSCEngine is ReentrancyGuard {
         uint256 amount
     );
 
+    event HealthFactorOk(
+        uint256 indexed startingUserHealthFactor,
+        uint256 indexed MIN_HEALTH_FACTOR
+    );
+
+    event DebugHealthFactor(
+        uint256 indexed totalDscMinted,
+        uint256 indexed collateralValueInUsd,
+        uint256 indexed collateralAdjustedForThreshold
+    );
+
+    event DebugStartEndHealth(
+        uint256 indexed startingUserHealthFactor,
+        uint256 indexed endingUserHealthFactor
+    );
+
     modifier moreThanZero(uint256 amount) {
         if (amount == 0) {
             revert DSCEngine__NeedsMoreThanZero();
@@ -235,6 +251,7 @@ contract DSCEngine is ReentrancyGuard {
     ) external moreThanZero(debtToCover) nonReentrant {
         uint256 startingUserHealthFactor = _healthFactor(user);
         if (startingUserHealthFactor >= MIN_HEALTH_FACTOR) {
+            emit HealthFactorOk(startingUserHealthFactor, MIN_HEALTH_FACTOR);
             revert DSCEngine__HealthFactorOk();
         }
         // We want to burn their DSC "debt"
@@ -259,12 +276,12 @@ contract DSCEngine is ReentrancyGuard {
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered +
             bonusCollateral;
 
-        _redeemCollateral(
-            collateral,
-            totalCollateralToRedeem,
-            user,
-            msg.sender
-        );
+        // _redeemCollateral(
+        //     collateral,
+        //     totalCollateralToRedeem,
+        //     user,
+        //     msg.sender
+        // );
         /**
          * @dev Low-level internal function, do not call unless the function calling it is
          * checking for health factores being broken
@@ -272,9 +289,15 @@ contract DSCEngine is ReentrancyGuard {
         _burnDsc(debtToCover, user, msg.sender);
         uint256 endingUserHealthFactor = _healthFactor(user);
 
+        emit DebugStartEndHealth(
+            startingUserHealthFactor,
+            endingUserHealthFactor
+        );
+
         if (endingUserHealthFactor <= startingUserHealthFactor) {
             revert DSEngine__HealthFactorNotImproved();
         }
+
         _revertIfHealthFActorIsBroken(msg.sender);
     }
 
@@ -297,7 +320,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     //THIS HAS BUG!!! INSPECT LATER
-    function _healthFactor(address user) private view returns (uint256) {
+    function _healthFactor(address user) private returns (uint256) {
         (
             uint256 totalDscMinted,
             uint256 collateralValueInUsd
@@ -306,8 +329,16 @@ contract DSCEngine is ReentrancyGuard {
         // LIQUIDATION_PRECISION is 100
         uint256 collateralAdjustedForThreshold = (collateralValueInUsd *
             LIQUIDATION_THRESHOLD) / LIQUIDATION_PRECISION;
+
+        emit DebugHealthFactor(
+            totalDscMinted,
+            collateralValueInUsd,
+            collateralAdjustedForThreshold
+        );
+
         if (totalDscMinted != 0) {
             return
+                // PRECISION is 1e18;
                 (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
         } else {
             return 10e18;
@@ -315,7 +346,7 @@ contract DSCEngine is ReentrancyGuard {
     }
 
     //private and internal functions
-    function _revertIfHealthFActorIsBroken(address user) internal view {
+    function _revertIfHealthFActorIsBroken(address user) internal {
         uint256 userHealthFactor = _healthFactor(user);
         if (userHealthFactor < MIN_HEALTH_FACTOR) {
             // revert DSCEngine__BreaksHealthFactor(userHealthFactor);

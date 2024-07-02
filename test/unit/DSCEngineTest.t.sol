@@ -243,11 +243,11 @@ contract DSCEngineTest is Test {
 
         //USER_2 mint 3 ether of Dsc
         uint256 STARTING_ERC20_BALANCE2 = 99999999999999999999 ether;
-        ERC20Mock(weth).mint(USER, STARTING_ERC20_BALANCE2);
-        uint256 trialDscToMint2 = 3 ether; // this is supposed to success, as collaterol is 10 ether, and 1 eth at least = 2000 usd
+        ERC20Mock(weth).mint(USER_2, STARTING_ERC20_BALANCE2);
+        uint256 trialDscToMint2 = 30 ether; // this is supposed to success, as collaterol is 10 ether, and 1 eth at least = 2000 usd
         uint256 collateralOfUser2 = STARTING_ERC20_BALANCE2;
 
-        vm.startPrank(USER);
+        vm.startPrank(USER_2);
         ERC20Mock(weth).approve(address(engine), collateralOfUser2);
         engine.depositCollateralAndMintDsc(
             weth,
@@ -263,7 +263,7 @@ contract DSCEngineTest is Test {
             .latestRoundData();
         assertEq(answer, resetPrice);
         console.log("after", engine.healthFactor(USER));
-        uint256 DscUsedToPayDept = 3 ether;
+        uint256 DscUsedToPayDept = 10 ether;
         ERC20Mock(dscAddress).approve(address(engine), DscUsedToPayDept);
 
         engine.liquidate(weth, USER, DscUsedToPayDept);
