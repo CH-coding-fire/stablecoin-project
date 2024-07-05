@@ -276,6 +276,8 @@ contract DSCEngine is ReentrancyGuard {
         uint256 totalCollateralToRedeem = tokenAmountFromDebtCovered +
             bonusCollateral;
 
+        //THIS IS THE PROBLEM
+
         // _redeemCollateral(
         //     collateral,
         //     totalCollateralToRedeem,
@@ -341,7 +343,7 @@ contract DSCEngine is ReentrancyGuard {
                 // PRECISION is 1e18;
                 (collateralAdjustedForThreshold * PRECISION) / totalDscMinted;
         } else {
-            return 10e18;
+            return type(uint256).max;
         }
     }
 
