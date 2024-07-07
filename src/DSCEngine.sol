@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+import {OracleLib} from "./libraries/OracleLib.sol";
 import {DecentralizedStableCoin} from "./DecentralizedStableCoin.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -38,6 +39,7 @@ contract DSCEngine is ReentrancyGuard {
     error DSCEngine__TransferFail();
     error DSCEngine__HealthFactorOk();
     error DSEngine__HealthFactorNotImproved();
+    using OracleLib for AggregatorV3Interface;
 
     uint256 private constant ADDITIONAL_FEED_PRECISION = 1e10;
     uint256 private constant PRECISION = 1e18;
@@ -369,7 +371,7 @@ contract DSCEngine is ReentrancyGuard {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
             s_priceFeed[token]
         );
-        (, int256 price, , , ) = priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.staleCheckLatestRoundData();
 
         // ($10e18 * 1e18) / ($2000e8 * 1e10)
         // Where the hell this "10" come out from?
@@ -413,7 +415,7 @@ contract DSCEngine is ReentrancyGuard {
         AggregatorV3Interface priceFeed = AggregatorV3Interface(
             s_priceFeed[token]
         ); //this is the priceFeed address
-        (, int256 price, , , ) = priceFeed.latestRoundData();
+        (, int256 price, , , ) = priceFeed.staleCheckLatestRoundData();
         return
             (uint256(price) * ADDITIONAL_FEED_PRECISION * amount) / PRECISION; //okok, why devide, I guess I am not good at math of solidity
     }
@@ -459,5 +461,20 @@ contract DSCEngine is ReentrancyGuard {
 
     function getDSCAddress() external view returns (address) {
         return address(i_dsc);
+    }
+
+    function getCollateralTokens() external view returns (address[] memory) {
+        return s_collateralTokens;
+    }
+
+    function getCollateralBalanceOfUser(
+        address user,
+        address token
+    ) external view returns (uint256) {
+        return s_collateralDeposited[user][token];
+    }
+
+    function getCollateralTokenPriceFeed(address token) external view returns (address) {
+        return s_priceFeed[token];
     }
 }

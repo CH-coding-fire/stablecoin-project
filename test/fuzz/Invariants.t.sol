@@ -28,18 +28,28 @@ contract Invariants is StdInvariant, Test {
         targetContract(address(handler));
     }
 
-    function invariant_protocolMustHaveMoreValueThanTotalSupply() public view {
-        //get the value of all the
+    function invariant_mustHaveMoreValueThanTotalSupply() public view {
         uint256 totalSupply = dsc.totalSupply();
         uint256 totalWethDeposited = IERC20(weth).balanceOf(address(dsce));
         uint256 totalBtcDeposited = IERC20(wbtc).balanceOf(address(dsce));
         uint256 wethValue = dsce.getUsdValue(weth, totalWethDeposited);
         uint256 wbtcValue = dsce.getUsdValue(wbtc, totalBtcDeposited);
-
-        console.log(totalSupply);
-        console.log(wethValue);
-        console.log(wbtcValue);
-
+        console.log("totalSupply",totalSupply);
+        console.log("wethValue", wethValue);
+        console.log("wbtcValue", wbtcValue);
+        console.log("Times mint1 called ", handler.timesMintIsCalled_1());
+        console.log("Times mint2 called ", handler.timesMintIsCalled_2());
+        console.log("Times mint3 called ", handler.timesMintIsCalled_3());
         assert(wethValue + wbtcValue >= totalSupply);
     }
+
+    function invariant_gettersShouldNotRevert() public view{
+        //this is lay up test that 100% should have
+        dsce.getMinHealthFactor();
+        dsce.getDSCAddress();
+        dsce.getCollateralTokens();
+    }
+
+
 }
+

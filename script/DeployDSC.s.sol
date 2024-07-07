@@ -20,7 +20,7 @@ contract DeployDSC is Script {
             address wbtcUsdPriceFeed,
             address weth,
             address wbtc,
-            uint256 deployerKey
+
         ) = config.activeNetworkConfig();
         vm.startBroadcast();
         DecentralizedStableCoin dsc = new DecentralizedStableCoin();
